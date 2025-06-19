@@ -69,9 +69,5 @@ class App {
     }
 
 
-    public function test() {
-       echo("Welcome to Home Page");
-
-    }
 
 }
