@@ -2,7 +2,7 @@
 
 class App {
 
-    protected $controller = 'login';
+    protected $controller = 'welcome';
     protected $method = 'index';
     protected $special_url = ['apply'];
     protected $params = [];
@@ -66,6 +66,12 @@ class App {
         $url = explode('/', filter_var(rtrim($u, '/'), FILTER_SANITIZE_URL));
 		unset($url[0]);
 		return $url;
+    }
+
+
+    public function test() {
+       echo("Welcome to Home Page");
+
     }
 
 }

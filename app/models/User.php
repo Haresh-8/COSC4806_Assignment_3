@@ -1,77 +1,53 @@
-<?php
+<?php 
+    require_once 'app/models/User.php';
 
-class User {
 
-    public function authenticate($username, $password) {
-        $db = db_connect();
-        $username = strtolower($username);
+    class User {
 
-        $statement = $db->prepare("SELECT * FROM users WHERE username = :name");
-        $statement->bindValue(':name', $username);
-        $statement->execute();
-        $user = $statement->fetch(PDO::FETCH_ASSOC);
+        public function authenticate($username, $password) {
+            $db = db_connect();
+            $stmt = $db->prepare("SELECT * FROM users WHERE username = :username");
+            $stmt->execute(['username' => $username]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        $this->logAttempt($username, $db, 'attempt');
+            // Check for lockout
+            if (isset($_SESSION['lastFailed']) && isset($_SESSION['failedAuth']) &&
+                time() - $_SESSION['lastFailed'] < 60 && $_SESSION['failedAuth'] >= 3) {
+                $_SESSION['error'] = "Too many failed attempts. Try again after 60 seconds.";
+                header("Location: /login");
+                exit;
+            }
 
-        if ($this->isLockedOut($username, $db)) {
-            $_SESSION['error'] = "Too many failed attempts. Try again after 60 seconds.";
-            header('Location: /login');
-            exit;
-        }
+            if ($user && password_verify($password, $user['password'])) {
+                // Success
+                $_SESSION['auth'] = 1;
+                $_SESSION['username'] = ucwords($username);
+                $_SESSION['failedAuth'] = 0;
+                unset($_SESSION['lastFailed']);
 
-        if ($user && password_verify($password, $user['password'])) {
-            $_SESSION['auth'] = 1;
-            $_SESSION['username'] = ucwords($username);
-            $this->logAttempt($username, $db, 'success');
-            $_SESSION['failedAuth'] = 0;
-            header('Location: /home');
-            exit;
-        } else {
-            $_SESSION['failedAuth'] = ($_SESSION['failedAuth'] ?? 0) + 1;
-            $this->logAttempt($username, $db, 'fail');
-            $_SESSION['error'] = "Invalid credentials.";
-            header('Location: /login');
-            exit;
-        }
-    }
+                $this->logAttempt($username, "good");
+                header("Location: /home");
+                exit;
+            } else {
+                // Failure
+                $_SESSION['failedAuth'] = ($_SESSION['failedAuth'] ?? 0) + 1;
+                $_SESSION['lastFailed'] = time();
+                $_SESSION['error'] = "Invalid login.";
 
-    private function logAttempt($username, $db, $status) {
-        $statement = $db->prepare("INSERT INTO login_log (username, status, log_time) VALUES (:username, :status, NOW())");
-        $statement->execute([
-            ':username' => $username,
-            ':status' => $status === 'success' ? 'success' : 'fail'
-        ]);
-    }
-
-    private function isLockedOut($username, $db) {
-        $statement = $db->prepare("
-            SELECT COUNT(*) AS failures, MAX(log_time) AS last_fail
-            FROM login_log 
-            WHERE username = :username AND status = 'fail'
-              AND log_time > (NOW() - INTERVAL 5 MINUTE)
-        ");
-        $statement->execute([':username' => $username]);
-        $result = $statement->fetch(PDO::FETCH_ASSOC);
-
-        if ($result['failures'] >= 3) {
-            $lastFail = strtotime($result['last_fail']);
-            if (time() - $lastFail < 60) {
-                return true;
+                $this->logAttempt($username, "bad");
+                header("Location: /login");
+                exit;
             }
         }
 
-        return false;
-    }
+        public function logAttempt($username, $attempt) {
+            $db = db_connect();
+            $stmt = $db->prepare("INSERT INTO login_log (username, attempt) VALUES (?, ?)");
+            $stmt->execute([$username, $attempt]);
+        }
 
-    public function create($username, $password) {
-        $db = db_connect();
-        $username = strtolower($username);
-        $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+        public function test() {
+           echo("Welcome to Home Page");
 
-        $statement = $db->prepare("INSERT INTO users (username, password) VALUES (:username, :password)");
-        $statement->execute([
-            ':username' => $username,
-            ':password' => $hashedPassword
-        ]);
+        }
     }
-}
