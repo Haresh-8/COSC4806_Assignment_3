@@ -14,6 +14,7 @@ define('LOGS', ROOT . DS . 'logs');
 define('FILES', ROOT . DS. 'files');
 
 // ---------------------  NEW DATABASE TABLE -------------------------
+
 define('DB_HOST',         'p6-gx.h.filess.io');
 define('DB_USER',         'COSC4806_shirtatom'); 
 define('DB_PASS',         $_ENV['DB_PASS']);
