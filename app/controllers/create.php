@@ -7,20 +7,33 @@ class Create extends Controller {
 
     public function store() {
         $username = strtolower(trim($_POST['username']));
-        $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
+        $passwordInput = trim($_POST['password']);
 
-        if (strlen($password) < 6) {
+        // Validate password length
+        if (strlen($passwordInput) < 6) {
             $_SESSION['error'] = "Password must be at least 6 characters long.";
             header("Location: /create");
             exit;
         }
 
-
         $db = db_connect();
+
+        // Check if username already exists
+        $checkStmt = $db->prepare("SELECT COUNT(*) FROM users WHERE username = ?");
+        $checkStmt->execute([$username]);
+
+        if ($checkStmt->fetchColumn() > 0) {
+            $_SESSION['error'] = "Username already exists. Please choose another.";
+            header("Location: /create");
+            exit;
+        }
+
+        // Hash and insert user
+        $password = password_hash($passwordInput, PASSWORD_DEFAULT);
         $stmt = $db->prepare("INSERT INTO users (username, password) VALUES (?, ?)");
         $stmt->execute([$username, $password]);
 
-        $_SESSION['message'] = "Account created. Please login.";
+        $_SESSION['message'] = "Account created successfully. Please login.";
         header("Location: /login");
         exit;
     }
