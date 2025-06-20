@@ -47,7 +47,7 @@
         }
 
         public function test() {
-           echo("Welcome to Home Page");
+           //echo("Welcome to Home Page");
 
         }
     }

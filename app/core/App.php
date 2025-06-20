@@ -1,7 +1,7 @@
 <?php
 
 class App {
-
+    // Deafult controller and method
     protected $controller = 'welcome';
     protected $method = 'index';
     protected $special_url = ['apply'];
